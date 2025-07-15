@@ -1,0 +1,40 @@
+# Rook Ceph Operator v1.17.6
+image:
+  repository: rook/ceph
+  tag: v1.17.6
+  pullPolicy: IfNotPresent
+
+# Enable CRDs
+crds:
+  enabled: true
+
+# Enable discovery daemon for automatic device discovery
+enableDiscoveryDaemon: true
+discoveryDaemonInterval: "60m"
+
+# Allow loop devices (useful for testing)
+allowLoopDevices: false
+
+# Improved resources for production readiness
+resources:
+  limits:
+    memory: 1Gi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+# Enable CSI drivers with proper observability
+csi:
+  csiAddons:
+    enabled: true
+  enableRbdDriver: true
+  enableCephfsDriver: true
+  enableLiveness: true
+  enableMetadata: true
+  provisionerReplicas: 1
+  grpcTimeoutInSeconds: 150
+  logLevel: 0
+  sidecarLogLevel: 0
+
+# RBAC enabled
+rbacEnable: true 

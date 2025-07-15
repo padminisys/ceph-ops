@@ -1,0 +1,26 @@
+name: Deploy Argo CD Application
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Setup Kubeconfig
+        run: |
+          echo "${{ secrets.PSYS_CENTOS_1_KUBE_CONFIG }}" | base64 --decode > kubeconfig.yaml
+        env:
+          KUBECONFIG: ./kubeconfig.yaml
+      - name: Setup Kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.33.2'
+      - name: Apply Root Argo CD Application
+        run: |
+          kubectl apply -f root-app.yaml
+        env:
+          KUBECONFIG: ./kubeconfig.yaml

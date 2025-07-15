@@ -1,0 +1,179 @@
+# Operator namespace
+operatorNamespace: rook-ceph
+
+# Ceph Cluster Configuration
+cephClusterSpec:
+  cephVersion:
+    image: quay.io/ceph/ceph:v18.2.0
+  dataDirHostPath: /var/lib/rook
+  mon:
+    count: 1
+    allowMultiplePerNode: true
+  dashboard:
+    enabled: true
+    ssl: true
+  storage:
+    # AUTOMATIC DEVICE DISCOVERY with safety filter
+    useAllNodes: true
+    useAllDevices: true
+    # Device filter to avoid root disk
+    deviceFilter: ^vd[b-z]$
+    config:
+      osdsPerDevice: "1"
+      osdMemoryTarget: "4096"
+      # BlueStore settings
+      osdStoreType: "bluestore"
+      # BlueStore compression for better space usage
+      bluestoreCompressionMode: "aggressive"
+  network:
+    hostNetwork: false
+  disruptionManagement:
+    managePodBudgets: false
+  mgr:
+    count: 1
+  crashCollector:
+    disable: true
+  # Single replica for non-HA setup
+  healthCheck:
+    daemonHealth:
+      mon:
+        interval: "45s"
+        timeout: "30s"
+
+# Block Storage (RBD)
+cephBlockPools:
+  - name: ceph-blockpool
+    spec:
+      replicated:
+        size: 1
+        requireSafeReplicaSize: false
+    storageClass:
+      enabled: true
+      name: ceph-block
+      isDefault: true
+      reclaimPolicy: Delete
+      allowVolumeExpansion: true
+      parameters:
+        clusterID: rook-ceph
+        pool: ceph-blockpool
+        csi.storage.k8s.io/provisioner-secret-name: rook-csi-rbd-provisioner
+        csi.storage.k8s.io/provisioner-secret-namespace: rook-ceph
+        csi.storage.k8s.io/controller-expand-secret-name: rook-csi-rbd-provisioner
+        csi.storage.k8s.io/controller-expand-secret-namespace: rook-ceph
+        csi.storage.k8s.io/node-stage-secret-name: rook-csi-rbd-node
+        csi.storage.k8s.io/node-stage-secret-namespace: rook-ceph
+        imageFormat: "2"
+        imageFeatures: layering,fast-diff,object-map,deep-flatten,exclusive-lock
+        csi.storage.k8s.io/fstype: ext4
+
+# File System (CephFS)
+cephFileSystems:
+  - name: ceph-filesystem
+    spec:
+      metadataPool:
+        replicated:
+          size: 1
+          requireSafeReplicaSize: false
+      dataPools:
+        - name: data0
+          replicated:
+            size: 1
+            requireSafeReplicaSize: false
+      preserveFilesystemOnDelete: false
+      preservePoolsOnDelete: false
+      metadataServer:
+        activeCount: 1
+        activeStandby: true      
+    storageClass:
+      enabled: true
+      name: ceph-filesystem
+      reclaimPolicy: Delete
+      allowVolumeExpansion: true
+      pool: data0
+      parameters:
+        clusterID: rook-ceph
+        fsName: ceph-filesystem
+        csi.storage.k8s.io/provisioner-secret-name: rook-csi-cephfs-provisioner
+        csi.storage.k8s.io/provisioner-secret-namespace: rook-ceph
+        csi.storage.k8s.io/node-stage-secret-name: rook-csi-cephfs-node
+        csi.storage.k8s.io/node-stage-secret-namespace: rook-ceph
+        csi.storage.k8s.io/controller-expand-secret-name: rook-csi-cephfs-provisioner
+        csi.storage.k8s.io/controller-expand-secret-namespace: rook-ceph        
+
+# Object Storage (RGW)
+cephObjectStores:
+  - name: ceph-objectstore
+    spec:
+      gateway:
+        instances: 1
+        port: 80
+        securePort: 443
+        sslCertificateRef: ceph-s3-gateway-tls # cert-manager will create this secret
+      metadataPool:
+        replicated:
+          size: 1
+          requireSafeReplicaSize: false
+      dataPool:
+        replicated:
+          size: 1
+          requireSafeReplicaSize: false
+    storageClass:
+      enabled: true
+      name: ceph-bucket
+      reclaimPolicy: Delete
+      parameters:
+        objectStoreName: ceph-objectstore
+        objectStoreNamespace: rook-ceph
+        region: us-east-1
+    ingress:
+      enabled: true
+      ingressClassName: nginx
+      host:
+        name: s3.padmini.systems
+      annotations:
+        cert-manager.io/cluster-issuer: "letsencrypt-prod"
+        nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      tls:
+        - secretName: ceph-s3-gateway-tls
+          hosts:
+            - s3.padmini.systems        
+
+# Enable toolbox for debugging
+toolbox:
+  enabled: true
+  resources:
+    limits:
+      memory: 1Gi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  # Security context for toolbox
+  containerSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 2016
+    runAsGroup: 2016
+    capabilities:
+      drop:
+        - ALL
+
+monitoring:
+  enabled: false
+  # Uncomment when Prometheus is ready:
+  # createPrometheusRules: true
+  # metricsDisabled: false 
+
+ingress:
+  # --- Dashboard Ingress ---
+  dashboard:
+    enabled: true
+    ingressClassName: nginx
+    host:
+      name: ceph.padmini.systems # Your desired URL for the dashboard
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    tls:
+      - secretName: ceph-dashboard-tls # cert-manager will create this secret
+        hosts:
+          - ceph.padmini.systems

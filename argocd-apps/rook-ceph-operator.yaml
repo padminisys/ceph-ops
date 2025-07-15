@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rook-ceph-operator
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  sources:
+    - repoURL: https://charts.rook.io/release
+      chart: rook-ceph
+      targetRevision: v1.17.6
+      helm:
+        valueFiles:
+          - $values-repo/rook-ceph-operator/values.yaml
+    - repoURL: https://github.com/padminisys/ceph-ops.git
+      targetRevision: HEAD
+      path: rook-ceph-operator
+      ref: values-repo
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: rook-ceph
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
