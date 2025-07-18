@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: csi-addons-crds
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"  # Install before operator
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/padminisys/ceph-ops.git
+    targetRevision: HEAD
+    path: csi-addons-crds
+  destination:
+    server: 'https://kubernetes.default.svc'
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
