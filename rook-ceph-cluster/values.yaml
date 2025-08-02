@@ -30,7 +30,8 @@ cephClusterSpec:
   disruptionManagement:
     managePodBudgets: false
   mgr:
-    count: 1
+    count: 2
+    allowMultiplePerNode: false
   crashCollector:
     disable: true
   # Single replica for non-HA setup
