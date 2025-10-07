@@ -1,0 +1,114 @@
+# ConfigMap containing test scripts for S3 operations
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: s3-test-scripts
+  namespace: default
+data:
+  test-basic-operations.sh: |
+    #!/bin/bash
+    set -e
+    
+    echo "=== S3 Basic Operations Test ==="
+    echo "Endpoint: $AWS_ENDPOINT_URL"
+    echo "Region: $AWS_DEFAULT_REGION"
+    echo "Bucket: $(cat /etc/bucket-config/BUCKET_NAME)"
+    
+    BUCKET_NAME=$(cat /etc/bucket-config/BUCKET_NAME)
+    
+    # Test 1: List buckets
+    echo -e "\n1. Listing all buckets:"
+    aws s3 ls --endpoint-url=$AWS_ENDPOINT_URL
+    
+    # Test 2: Create a test file
+    echo -e "\n2. Creating test file:"
+    echo "Hello from Rook Ceph S3!" > /tmp/test-file.txt
+    echo "Current timestamp: $(date)" >> /tmp/test-file.txt
+    
+    # Test 3: Upload file to bucket
+    echo -e "\n3. Uploading test file to bucket:"
+    aws s3 cp /tmp/test-file.txt s3://$BUCKET_NAME/test-file.txt --endpoint-url=$AWS_ENDPOINT_URL
+    
+    # Test 4: List objects in bucket
+    echo -e "\n4. Listing objects in bucket:"
+    aws s3 ls s3://$BUCKET_NAME/ --endpoint-url=$AWS_ENDPOINT_URL
+    
+    # Test 5: Download file from bucket
+    echo -e "\n5. Downloading file from bucket:"
+    aws s3 cp s3://$BUCKET_NAME/test-file.txt /tmp/downloaded-file.txt --endpoint-url=$AWS_ENDPOINT_URL
+    
+    # Test 6: Verify file content
+    echo -e "\n6. Verifying downloaded file content:"
+    cat /tmp/downloaded-file.txt
+    
+    # Test 7: Get bucket info
+    echo -e "\n7. Getting bucket location:"
+    aws s3api get-bucket-location --bucket $BUCKET_NAME --endpoint-url=$AWS_ENDPOINT_URL
+    
+    echo -e "\n=== All tests completed successfully! ==="
+
+  test-advanced-operations.sh: |
+    #!/bin/bash
+    set -e
+    
+    echo "=== S3 Advanced Operations Test ==="
+    BUCKET_NAME=$(cat /etc/bucket-config/BUCKET_NAME)
+    
+    # Test 1: Create multiple test files
+    echo -e "\n1. Creating multiple test files:"
+    for i in {1..5}; do
+        echo "Test file $i - $(date)" > /tmp/test-file-$i.txt
+    done
+    
+    # Test 2: Upload multiple files
+    echo -e "\n2. Uploading multiple files:"
+    for i in {1..5}; do
+        aws s3 cp /tmp/test-file-$i.txt s3://$BUCKET_NAME/files/test-file-$i.txt --endpoint-url=$AWS_ENDPOINT_URL
+    done
+    
+    # Test 3: Sync directory
+    echo -e "\n3. Creating directory structure and syncing:"
+    mkdir -p /tmp/sync-test/subdir
+    echo "Main directory file" > /tmp/sync-test/main.txt
+    echo "Subdirectory file" > /tmp/sync-test/subdir/sub.txt
+    aws s3 sync /tmp/sync-test s3://$BUCKET_NAME/sync-test/ --endpoint-url=$AWS_ENDPOINT_URL
+    
+    # Test 4: List all objects with prefix
+    echo -e "\n4. Listing objects with prefix:"
+    aws s3 ls s3://$BUCKET_NAME/files/ --recursive --endpoint-url=$AWS_ENDPOINT_URL
+    
+    # Test 5: Get object metadata
+    echo -e "\n5. Getting object metadata:"
+    aws s3api head-object --bucket $BUCKET_NAME --key files/test-file-1.txt --endpoint-url=$AWS_ENDPOINT_URL
+    
+    # Test 6: Copy object within bucket
+    echo -e "\n6. Copying object within bucket:"
+    aws s3 cp s3://$BUCKET_NAME/files/test-file-1.txt s3://$BUCKET_NAME/backup/test-file-1-backup.txt --endpoint-url=$AWS_ENDPOINT_URL
+    
+    # Test 7: Delete specific objects
+    echo -e "\n7. Deleting specific objects:"
+    aws s3 rm s3://$BUCKET_NAME/files/test-file-5.txt --endpoint-url=$AWS_ENDPOINT_URL
+    
+    # Test 8: Final bucket listing
+    echo -e "\n8. Final bucket contents:"
+    aws s3 ls s3://$BUCKET_NAME/ --recursive --endpoint-url=$AWS_ENDPOINT_URL
+    
+    echo -e "\n=== Advanced tests completed successfully! ==="
+
+  cleanup.sh: |
+    #!/bin/bash
+    set -e
+    
+    echo "=== S3 Cleanup Script ==="
+    BUCKET_NAME=$(cat /etc/bucket-config/BUCKET_NAME)
+    
+    echo "Cleaning up all objects in bucket: $BUCKET_NAME"
+    
+    # Remove all objects from bucket
+    aws s3 rm s3://$BUCKET_NAME/ --recursive --endpoint-url=$AWS_ENDPOINT_URL
+    
+    echo "Bucket cleanup completed!"
+    
+    # List final state
+    echo "Final bucket state:"
+    aws s3 ls s3://$BUCKET_NAME/ --endpoint-url=$AWS_ENDPOINT_URL || echo "Bucket is empty"

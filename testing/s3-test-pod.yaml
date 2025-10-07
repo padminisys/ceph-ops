@@ -1,0 +1,59 @@
+# Test pod to interact with S3 bucket using AWS CLI
+apiVersion: v1
+kind: Pod
+metadata:
+  name: s3-test-pod
+  namespace: default
+  labels:
+    app: s3-test
+spec:
+  restartPolicy: Never
+  containers:
+  - name: aws-cli
+    image: amazon/aws-cli:latest
+    command: ["/bin/sh"]
+    args: ["-c", "sleep 3600"]  # Keep pod running for testing
+    env:
+    # These will be populated from the ObjectBucketClaim secret
+    - name: AWS_ACCESS_KEY_ID
+      valueFrom:
+        secretKeyRef:
+          name: test-s3-bucket
+          key: AWS_ACCESS_KEY_ID
+    - name: AWS_SECRET_ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          name: test-s3-bucket
+          key: AWS_SECRET_ACCESS_KEY
+    - name: AWS_DEFAULT_REGION
+      value: "us-east-1"
+    - name: AWS_ENDPOINT_URL
+      value: "https://s3.padmini.systems"
+    # For internal testing, you can also use HTTP endpoint
+    - name: AWS_ENDPOINT_URL_INTERNAL
+      value: "http://rook-ceph-rgw-ceph-objectstore.rook-ceph.svc"
+    # Disable SSL verification for self-signed certs (if needed)
+    - name: AWS_CLI_AUTO_PROMPT
+      value: "off"
+    volumeMounts:
+    - name: bucket-config
+      mountPath: /etc/bucket-config
+      readOnly: true
+  volumes:
+  - name: bucket-config
+    configMap:
+      name: test-s3-bucket
+---
+# Service for accessing the test pod (optional)
+apiVersion: v1
+kind: Service
+metadata:
+  name: s3-test-service
+  namespace: default
+spec:
+  selector:
+    app: s3-test
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP

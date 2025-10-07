@@ -1,0 +1,75 @@
+# Self-signed certificate for internal Ceph S3 gateway communication
+# This solves the ObjectBucketClaim TLS issue while keeping external security
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: ceph-s3-selfsigned-issuer
+  namespace: rook-ceph
+spec:
+  selfSigned: {}
+---
+# Certificate for internal service communication
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ceph-s3-gateway-internal-tls
+  namespace: rook-ceph
+spec:
+  # Certificate will be stored in this secret
+  secretName: ceph-s3-gateway-internal-tls
+  
+  # Use self-signed issuer for internal domains
+  issuerRef:
+    name: ceph-s3-selfsigned-issuer
+    kind: Issuer
+    group: cert-manager.io
+  
+  # Include internal service names
+  dnsNames:
+    - rook-ceph-rgw-ceph-objectstore.rook-ceph.svc
+    - rook-ceph-rgw-ceph-objectstore.rook-ceph.svc.cluster.local
+    - localhost
+    - 127.0.0.1
+  
+  # Also include IP addresses if needed
+  ipAddresses:
+    - 127.0.0.1
+  
+  # Certificate configuration
+  duration: 8760h # 1 year (longer for internal certs)
+  renewBefore: 720h # 30 days before expiry
+  
+  # Key configuration
+  privateKey:
+    algorithm: RSA
+    size: 2048
+  
+  # Certificate usage
+  usages:
+    - digital signature
+    - key encipherment
+    - server auth
+---
+# CA Certificate for the self-signed issuer (optional, for trust chain)
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ceph-s3-ca-cert
+  namespace: rook-ceph
+spec:
+  secretName: ceph-s3-ca-cert
+  duration: 17520h # 2 years
+  renewBefore: 720h # 30 days
+  isCA: true
+  commonName: "Ceph S3 Internal CA"
+  issuerRef:
+    name: ceph-s3-selfsigned-issuer
+    kind: Issuer
+    group: cert-manager.io
+  privateKey:
+    algorithm: RSA
+    size: 2048
+  usages:
+    - digital signature
+    - key encipherment
+    - cert sign
