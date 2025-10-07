@@ -109,7 +109,7 @@ cephObjectStores:
         instances: 1
         port: 80
         securePort: 443
-        sslCertificateRef: ceph-s3-gateway-tls # cert-manager will create this secret
+        sslCertificateRef: ceph-s3-gateway-internal-tls # Use internal certificate
       metadataPool:
         replicated:
           size: 1
@@ -134,10 +134,14 @@ cephObjectStores:
       annotations:
         cert-manager.io/cluster-issuer: "letsencrypt-prod"
         nginx.ingress.kubernetes.io/ssl-redirect: "true"
+        # Backend uses HTTPS with internal certificate
+        nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+        # Skip certificate verification for backend (internal self-signed cert)
+        nginx.ingress.kubernetes.io/proxy-ssl-verify: "off"
       tls:
-        - secretName: ceph-s3-gateway-tls
+        - secretName: ceph-s3-gateway-tls  # Keep external Let's Encrypt cert
           hosts:
-            - s3.padmini.systems        
+            - s3.padmini.systems
 
 # Enable toolbox for debugging
 toolbox:

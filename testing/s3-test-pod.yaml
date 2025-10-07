@@ -29,6 +29,9 @@ spec:
       value: "us-east-1"
     - name: AWS_ENDPOINT_URL
       value: "https://s3.padmini.systems"
+    # For internal testing, you can also use HTTP endpoint
+    - name: AWS_ENDPOINT_URL_INTERNAL
+      value: "http://rook-ceph-rgw-ceph-objectstore.rook-ceph.svc"
     # Disable SSL verification for self-signed certs (if needed)
     - name: AWS_CLI_AUTO_PROMPT
       value: "off"
