@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - testing-all-storage
   workflow_dispatch:
 jobs:
   deploy:
