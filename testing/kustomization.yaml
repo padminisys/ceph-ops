@@ -1,0 +1,28 @@
+# Kustomization file for S3 testing resources
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: s3-testing
+  namespace: default
+
+# Resources to deploy
+resources:
+  - s3-bucket-claim.yaml
+  - s3-test-scripts.yaml
+  - s3-test-pod.yaml
+  - s3-test-job.yaml
+
+# Common labels for all resources
+commonLabels:
+  app.kubernetes.io/name: s3-testing
+  app.kubernetes.io/component: storage-test
+  app.kubernetes.io/part-of: rook-ceph-testing
+
+# Common annotations
+commonAnnotations:
+  description: "S3 bucket testing resources for Rook Ceph"
+  documentation: "See README.md for usage instructions"
+
+# Namespace for all resources
+namespace: default

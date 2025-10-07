@@ -1,0 +1,27 @@
+# Object Bucket Claim for S3 testing
+# This creates an S3 bucket using Rook Ceph Object Storage
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: test-s3-bucket
+  namespace: default
+spec:
+  # Reference to the Ceph Object Store
+  storageClassName: ceph-bucket
+  # Bucket name (optional - will be auto-generated if not specified)
+  bucketName: test-bucket-001
+  # Additional bucket configuration
+  additionalConfig:
+    # Set bucket versioning
+    versioning: "true"
+---
+# ConfigMap to store bucket information
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: s3-bucket-info
+  namespace: default
+data:
+  bucket-name: "test-bucket-001"
+  endpoint: "s3.padmini.systems"
+  region: "us-east-1"
